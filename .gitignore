@@ -1,0 +1,14 @@
+node_modules/
+__pycache__/
+*.pyc
+.next/
+out/
+data/raw/
+data/*.db
+data/*.db-*
+*.log
+tmp/
+tools/aria2/
+.DS_Store
+playwright-report/
+test-results/
