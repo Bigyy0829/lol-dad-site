@@ -36,11 +36,13 @@ npm run build && npm run start
 - 数据源：
   - **Oracle's Elixir**（`oracleselixir.com`）：2014-2015 欧美/世界赛与 **2016 年至今**全球职业比赛（LPL / LCK / LEC / LCS / PCS 等各大赛区与 MSI、全球总决赛，2026 含 MSI/EWC 等最新赛事）。
   - **Leaguepedia**（`lol.fandom.com`）：补全 OE 缺失的历史数据——**2011-2013 全部赛事**、2014 年 LCK/LPL/LMS、2015 年 LPL。
+  - **Leaguepedia 国家队/特殊赛事**：亚运会（2018 预选赛、2022 杭州主赛、2026 预选赛）、洲际对抗赛 Rift Rivals（2017-2019）、全明星（2013-2017）、LPL 全明星等——这类不以俱乐部名义参赛的国家队对局 OE 不收录，但选手交手真实存在（如 Faker vs Uzi 的 2018 亚运预选赛 3 局）。
 - 下载：
   - `scripts/fetch-drive-official.ps1`：官方 [Drive 文件夹](https://drive.google.com/drive/folders/1gLSw0RLjBbtaNy0dgnGQDAZOHIgCe-HH) 下载 OE 各年份 CSV（断点续传、低速熔断与大小校验），需要本机代理（见 `docs/network-setup.md`）；`scripts/fetch-data.ps1` 作为 Kaggle 镜像兜底。
   - `scripts/fetch-leaguepedia.py`：通过 Leaguepedia `Special:CargoExport` 拉取 2011-2015 缺失赛事（比赛 → 赛事映射 → 选手级数据），输出与 OE 同格式的 CSV；缓存于 `tmp/leaguepedia/`，`--refresh` 可强制重拉。
+    - `--events` 模式：拉取亚运会 / 洲际对抗赛 / 全明星等国家队与特殊赛事（缓存同样可复用）。
   - 文件均落盘 `data/raw/`，`scripts/build_db.py` 统一建库。
-- 覆盖范围：**2011 年至今**。年份明细：2011-2013（Leaguepedia）、2014（OE 欧美 + Leaguepedia 的 LCK/LPL/LMS）、2015（OE 全赛区 + Leaguepedia 的 LPL）、2016-2026（OE 官方数据）。
+- 覆盖范围：**2011 年至今**。年份明细：2011-2013（Leaguepedia）、2014（OE 欧美 + Leaguepedia 的 LCK/LPL/LMS）、2015（OE 全赛区 + Leaguepedia 的 LPL）、2016-2026（OE 官方数据）+ 亚运会/洲际对抗赛/全明星等国家队赛事。
 - 建库：`scripts/build_db.py` 清洗、归一化选手名、合并别名（`scripts/seed_aliases.json` 可扩展），生成 `data/lol.db`。
 - 口径：
   - 「交手」= 两名选手同一小局互为对手（不同队伍）且均上场；同队不算。

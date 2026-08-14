@@ -53,6 +53,20 @@ COVERED_2014 = {
 }
 LPL_LEAGUE = "Tencent LoL Pro League"         # 2015: only LPL missing
 
+# National-team / special international events not covered by Oracle's Elixir:
+# All-Star (2015-2017; 2013/2014 already fetched by the main pipeline),
+# Asian Games (2018 qualifiers, 2022 Hangzhou, 2026 qualifiers), Korean
+# national-team selection, Rift Rivals (2017-2019), LPL All-Star.
+EVENT_WHERE = (
+    "(Tournament LIKE '%All-Star%' AND Tournament NOT LIKE 'All-Star 2013%' "
+    "AND Tournament NOT LIKE 'All-Star 2014%' AND Tournament NOT LIKE 'LPL All-Star%') "
+    "OR Tournament LIKE '%Asian Games%' "
+    "OR Tournament LIKE '%KOREA Pre Evaluation%' "
+    "OR Tournament LIKE '%RDAG%' OR Tournament LIKE '%Road to Asian Games%' "
+    "OR Tournament LIKE '%Rift Rivals%' "
+    "OR Tournament LIKE 'LPL All-Star%'"
+)
+
 LEAGUE_MAP = {
     "LoL The Champions": "LCK",
     "Champions Korea": "LCK",
@@ -216,6 +230,20 @@ def keep_game(year, tourn_league):
     return False
 
 
+def event_league(tourn):
+    if any(k in tourn for k in ("KOREA Pre Evaluation", "RDAG", "Road to Asian Games")):
+        return "Asian Games Qual"
+    if "Rift Rivals" in tourn:
+        return "Rift Rivals"
+    if "Asian Games" in tourn:
+        return "Asian Games"
+    if tourn.startswith("LPL All-Star"):
+        return "LPL All-Star"
+    if "All-Star" in tourn:
+        return "All-Star"
+    return ""
+
+
 def build_csvs(games, tournaments, players):
     tourn = {}
     for t in tournaments:
@@ -321,10 +349,131 @@ def build_csvs(games, tournaments, players):
     log(f"TOTAL player rows written: {total:,}")
 
 
+def build_events_csv(games, players):
+    """Build OE-format CSV for national-team / special events (keep all)."""
+    players_by_game = {}
+    for p in players:
+        gid = p.get("GameId")
+        if gid:
+            players_by_game.setdefault(gid, []).append(p)
+
+    rows_out = []
+    kept = skipped_no_winner = skipped_no_players = 0
+    for g in games:
+        gid = g.get("GameId")
+        tname = (g.get("Tournament") or "").strip()
+        dt = (g.get("DateTime_UTC") or "").strip()
+        date = dt[:10] if dt else ""
+        ps = players_by_game.get(gid)
+        if not ps:
+            skipped_no_players += 1
+            continue
+        win_team = (g.get("WinTeam") or "").strip()
+        if not win_team:
+            try:
+                winner = int((g.get("Winner") or "").strip() or 0)
+            except ValueError:
+                winner = 0
+            if winner == 1:
+                win_team = (g.get("Team1") or "").strip()
+            elif winner == 2:
+                win_team = (g.get("Team2") or "").strip()
+        if not win_team:
+            skipped_no_winner += 1
+            continue
+        league = event_league(tname)
+        game_no = (g.get("N_GameInMatch") or "1").strip() or "1"
+        matchid = (g.get("MatchId") or gid).strip()
+        for p in ps:
+            side_val = (p.get("Side") or "").strip()
+            side = "Blue" if side_val == "1" else ("Red" if side_val == "2" else "")
+            if not side:
+                continue
+            player = html.unescape((p.get("Link") or "").strip())
+            if not player:
+                continue
+            rows_out.append({
+                "gameid": gid,
+                "matchid": matchid,
+                "league": league,
+                "split": "",
+                "playoffs": 0,
+                "date": date,
+                "game": game_no,
+                "side": side,
+                "position": POS_MAP.get((p.get("Role") or "").strip(), "UNK"),
+                "player": player,
+                "team": html.unescape((p.get("Team") or "").strip()),
+                "champion": html.unescape((p.get("Champion") or "").strip()),
+                "result": 1 if (p.get("Team") or "").strip() == win_team else 0,
+            })
+        kept += 1
+
+    log(f"events kept games: {kept}, skipped no-winner: {skipped_no_winner}, "
+        f"skipped no-players: {skipped_no_players}")
+    path = os.path.join(
+        RAW_DIR, "events_leaguepedia_LoL_esports_match_data_from_OraclesElixir.csv")
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=OE_COLUMNS)
+        w.writeheader()
+        w.writerows(rows_out)
+    leagues = sorted({r["league"] for r in rows_out})
+    log(f"{path}: {len(rows_out):,} player rows | leagues: {leagues}")
+
+
+def fetch_events(refresh=False):
+    gcache = os.path.join(CACHE_DIR, "events_games.json")
+    pcache = os.path.join(CACHE_DIR, "events_players.json")
+    if not refresh and os.path.exists(gcache) and os.path.exists(pcache):
+        with open(gcache, encoding="utf-8") as f:
+            games = [norm_keys(r) for r in json.load(f)]
+        with open(pcache, encoding="utf-8") as f:
+            players = [norm_keys(r) for r in json.load(f)]
+        log(f"events cached: {len(games)} games, {len(players)} players")
+        return games, players
+
+    games = []
+    offset = 0
+    where = f"({EVENT_WHERE}) AND DateTime_UTC >= '2015-01-01'"
+    while True:
+        batch = cargo_export("ScoreboardGames", GAMES_FIELDS, where,
+                             limit=2000, offset=offset)
+        log(f"  events games offset {offset}: {len(batch)} rows")
+        games.extend(batch)
+        if len(batch) < 2000:
+            break
+        offset += 2000
+        time.sleep(1.2)
+
+    gids = [g.get("GameId") for g in games if g.get("GameId")]
+    players = []
+    batch_size = 50
+    for i in range(0, len(gids), batch_size):
+        chunk = gids[i:i + batch_size]
+        esc = "','".join(x.replace("'", "''") for x in chunk)
+        batch = cargo_export("ScoreboardPlayers", PLAYERS_FIELDS,
+                             f"GameId IN ('{esc}')")
+        players.extend(batch)
+        log(f"  events players {i + len(chunk)}/{len(gids)} -> {len(batch)} rows")
+        time.sleep(1.0)
+
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    with open(gcache, "w", encoding="utf-8") as f:
+        json.dump(games, f, ensure_ascii=False)
+    with open(pcache, "w", encoding="utf-8") as f:
+        json.dump(players, f, ensure_ascii=False)
+    return games, players
+
+
 def main():
     refresh = "--refresh" in sys.argv
     build_only = "--build-only" in sys.argv
+    events_mode = "--events" in sys.argv
     os.makedirs(CACHE_DIR, exist_ok=True)
+    if events_mode:
+        games, players = fetch_events(refresh)
+        build_events_csv(games, players)
+        return
     if build_only:
         with open(os.path.join(CACHE_DIR, "games.json"), encoding="utf-8") as f:
             games = [norm_keys(r) for r in json.load(f)]

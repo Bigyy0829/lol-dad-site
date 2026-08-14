@@ -210,12 +210,18 @@ def build():
     # when the base tag exists as a player AND has exactly one parenthetical
     # variant (unambiguous). Bases with multiple variants (e.g. two different
     # "Uzi") are handled via curated seed aliases instead.
+    # Skip "real-name style" entries where the parenthetical's first word equals
+    # the base (e.g. "TIAN (Tian Ye)" = Meiko, but "Tian" is also a jungler):
+    # those must go through curated aliases to avoid colliding with unrelated
+    # players who share the same surname as a tag.
     variants: dict[str, set[str]] = defaultdict(set)
     for norm, display in name_counter:
-        m = re.match(r"^(.+?)\s*\([^)]*\)\s*$", display)
+        m = re.match(r"^(.+?)\s*\(([^)]*)\)\s*$", display)
         if m:
             base = norm_name(m.group(1))
-            if base:
+            inner = re.match(r"\s*(\S+)", m.group(2))
+            first_word = norm_name(inner.group(1)) if inner else ""
+            if base and base != first_word:
                 variants[base].add(norm)
     dynamic = {}
     for base, norms in variants.items():
