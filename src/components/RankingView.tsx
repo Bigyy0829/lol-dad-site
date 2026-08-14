@@ -103,6 +103,8 @@ export default function RankingView({
 
   useEffect(() => {
     load();
+    // 未选择选手（如 /ranking 首页）时不改写 URL，避免跳到 /ranking/undefined
+    if (!playerId) return;
     const { from, to } = effective;
     const params = new URLSearchParams({ type });
     params.set("min_games", String(minGames));
