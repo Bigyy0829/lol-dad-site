@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "data:refresh": "powershell -ExecutionPolicy Bypass -File scripts/fetch-data.ps1 && python scripts/build_db.py",
+    "data:refresh": "powershell -ExecutionPolicy Bypass -File scripts/fetch-data.ps1 && python scripts/fetch-leaguepedia.py && python scripts/build_db.py",
     "data:build": "python scripts/build_db.py",
     "test": "vitest run",
     "test:ui": "node scripts/verify-ui.mjs"

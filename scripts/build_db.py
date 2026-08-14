@@ -205,12 +205,46 @@ def build():
         if best is None or cnt > name_counter[(norm, best)]:
             info["_display"] = display
 
+    # Dynamic: Leaguepedia disambiguates with parenthetical suffixes, e.g.
+    # "Wolf (Lee Jae-wan)" -> plain tag "Wolf". Merge into the plain tag only
+    # when the base tag exists as a player AND has exactly one parenthetical
+    # variant (unambiguous). Bases with multiple variants (e.g. two different
+    # "Uzi") are handled via curated seed aliases instead.
+    variants: dict[str, set[str]] = defaultdict(set)
+    for norm, display in name_counter:
+        m = re.match(r"^(.+?)\s*\([^)]*\)\s*$", display)
+        if m:
+            base = norm_name(m.group(1))
+            if base:
+                variants[base].add(norm)
+    dynamic = {}
+    for base, norms in variants.items():
+        if len(norms) == 1 and base in player_rows:
+            n = next(iter(norms))
+            if n != base:
+                dynamic[n] = base
+    if dynamic:
+        print(f"Dynamic disambiguation merges: {len(dynamic)}")
+        for norm, target in dynamic.items():
+            src = player_rows.pop(norm)
+            dst = player_rows[target]
+            for k in ("positions", "teams"):
+                dst[k].update(src[k])
+            for y, c in src["year_teams"].items():
+                dst["year_teams"].setdefault(y, Counter()).update(c)
+            dst["years"] |= src["years"]
+            dst["games"] += src["games"]
+            # keep dst display (the plain base tag)
+        for rows in game_players.values():
+            for r in rows:
+                r["norm"] = dynamic.get(r["norm"], r["norm"])
+
     # Apply seed alias remapping: a player norm equal to an alias key merges
     # into the alias target (handles alternate in-data spellings).
     merged = {}
     for norm in list(player_rows):
         target = alias_map.get(norm)
-        if target and target != norm:
+        if target and target != norm and target in player_rows:
             merged[norm] = target
     for norm, target in merged.items():
         src = player_rows.pop(norm)
@@ -228,7 +262,7 @@ def build():
             dst["year_teams"].setdefault(y, Counter()).update(c)
         dst["years"] |= src["years"]
         dst["games"] += src["games"]
-        if src.get("_display"):
+        if src.get("_display") and not dst.get("_display"):
             dst["_display"] = src["_display"]
     if merged:
         print(f"Merged {len(merged)} name variants via seed aliases.")
@@ -288,6 +322,45 @@ def build():
             pair = "~".join(sorted([ginfo["blue_team"], ginfo["red_team"]]))
             ginfo["matchid"] = f"{ginfo['league']}|{ginfo['date']}|{pair}"
         games_out.append(ginfo)
+
+    # Oracle's Elixir CSVs have no real matchid: the generated id embeds the
+    # date, which splits series that straddle midnight into two "series".
+    # Rebuild a stable series id from continuity: same league/split/playoffs/
+    # teams, adjacent dates, and continuing game numbers -> same series.
+    def _series_num(v):
+        try:
+            n = int(float(str(v)))
+        except (TypeError, ValueError):
+            n = 0
+        return n if n > 0 else 1
+
+    def _day_gap(a, b):
+        try:
+            return (pd.Timestamp(b).date() - pd.Timestamp(a).date()).days
+        except Exception:
+            return 99
+
+    series_groups = defaultdict(list)
+    for gid, g in game_rows.items():
+        if not g["blue_team"] or not g["red_team"]:
+            continue
+        pair = "~".join(sorted([g["blue_team"], g["red_team"]]))
+        series_groups[(g["league"], g["split"], bool(g["playoffs"]), pair)].append(gid)
+
+    for key, gids in series_groups.items():
+        gids.sort(key=lambda gid: (game_rows[gid]["date"],
+                                   _series_num(game_rows[gid]["game_number"]), gid))
+        idx = 0
+        prev_d, prev_n = None, None
+        for gid in gids:
+            g = game_rows[gid]
+            n = _series_num(g["game_number"])
+            if prev_d is None:
+                idx += 1
+            elif _day_gap(prev_d, g["date"]) > 1 or n <= prev_n:
+                idx += 1
+            g["matchid"] = "|".join([key[0], key[1], str(key[2]), key[3], f"S{idx}"])
+            prev_d, prev_n = g["date"], n
 
     # h2h counters
     pair_stats = defaultdict(lambda: {"games": 0, "a_wins": 0, "b_wins": 0,

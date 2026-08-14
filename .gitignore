@@ -4,6 +4,7 @@ __pycache__/
 .next/
 out/
 data/raw/
+data/raw_mirror_backup/
 data/*.db
 data/*.db-*
 *.log
