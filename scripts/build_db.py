@@ -125,6 +125,7 @@ def build():
     game_players: dict[str, list[dict]] = {}  # gameid -> [player rows]
 
     total_rows = 0
+    excluded_exhibition = 0
     for df in frames:
         df = df.dropna(subset=["player"])
         df["player"] = df["player"].astype(str).str.strip()
@@ -141,7 +142,11 @@ def build():
         df["team_"] = df["team"].fillna("").astype(str).str.strip()
         df["result_"] = df["result"].fillna(0).astype(int)
         df["side_"] = df["side"].fillna("").astype(str).str.strip()
+        df["league_"] = df["league"].fillna("").astype(str).str.strip()
         total_rows += len(df)
+        exhibition_mask = df["league_"].str.lower().str.contains("all-star", na=False)
+        excluded_exhibition += int(exhibition_mask.sum())
+        df = df[~exhibition_mask]
 
         for rec in df.itertuples(index=False):
             norm = rec.norm_
@@ -174,7 +179,7 @@ def build():
                     "matchid": rec.matchid_,
                     "date": rec.date_,
                     "year": rec.date_[:4] or "",
-                    "league": "" if pd.isna(rec.league) else str(rec.league).strip(),
+                    "league": rec.league_,
                     "split": "" if pd.isna(rec.split) else str(rec.split).strip(),
                     "playoffs": rec.playoffs_,
                     "game_number": rec.game_,
@@ -197,6 +202,7 @@ def build():
             })
 
     print(f"Raw player-game rows: {total_rows:,}")
+    print(f"Excluded exhibition (All-Star) rows: {excluded_exhibition:,}")
 
     # Resolve canonical display name per norm.
     for (norm, display), cnt in name_counter.items():

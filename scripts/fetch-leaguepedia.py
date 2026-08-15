@@ -53,18 +53,14 @@ COVERED_2014 = {
 }
 LPL_LEAGUE = "Tencent LoL Pro League"         # 2015: only LPL missing
 
-# National-team / special international events not covered by Oracle's Elixir:
-# All-Star (2015-2017; 2013/2014 already fetched by the main pipeline),
-# Asian Games (2018 qualifiers, 2022 Hangzhou, 2026 qualifiers), Korean
-# national-team selection, Rift Rivals (2017-2019), LPL All-Star.
+# National-team / special international events not covered by Oracle's Elixir.
+# All-Star / LPL All-Star are exhibition games and intentionally excluded from
+# official head-to-head stats, so they are not fetched here.
 EVENT_WHERE = (
-    "(Tournament LIKE '%All-Star%' AND Tournament NOT LIKE 'All-Star 2013%' "
-    "AND Tournament NOT LIKE 'All-Star 2014%' AND Tournament NOT LIKE 'LPL All-Star%') "
-    "OR Tournament LIKE '%Asian Games%' "
+    "Tournament LIKE '%Asian Games%' "
     "OR Tournament LIKE '%KOREA Pre Evaluation%' "
     "OR Tournament LIKE '%RDAG%' OR Tournament LIKE '%Road to Asian Games%' "
-    "OR Tournament LIKE '%Rift Rivals%' "
-    "OR Tournament LIKE 'LPL All-Star%'"
+    "OR Tournament LIKE '%Rift Rivals%'"
 )
 
 LEAGUE_MAP = {
@@ -237,10 +233,6 @@ def event_league(tourn):
         return "Rift Rivals"
     if "Asian Games" in tourn:
         return "Asian Games"
-    if tourn.startswith("LPL All-Star"):
-        return "LPL All-Star"
-    if "All-Star" in tourn:
-        return "All-Star"
     return ""
 
 
