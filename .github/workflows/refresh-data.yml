@@ -91,17 +91,32 @@ jobs:
 
       - name: Remove old releases
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          $tags = gh release list --repo "${{ github.repository }}" --json tagName --jq ".[].tagName" 2>$null
-          foreach ($t in $tags) {
-            if ($t) { gh release delete $t -y --repo "${{ github.repository }}" }
+          $PSNativeCommandUseErrorActionPreference = $false
+          $ErrorActionPreference = "Continue"
+          $out = gh release list --repo "${{ github.repository }}" --json tagName --jq '.[].tagName' 2>&1
+          Write-Host "gh list exit: $LASTEXITCODE"
+          foreach ($t in @($out)) {
+            if ($t -and $t.Trim()) {
+              gh release delete "$t" -y --repo "${{ github.repository }}" 2>&1 | Out-Host
+              Write-Host "deleted old release: $t (exit $LASTEXITCODE)"
+            }
           }
-          Write-Host "old releases removed"
+          Write-Host "old releases cleanup done"
 
       - name: Create release
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          $PSNativeCommandUseErrorActionPreference = $false
+          $ErrorActionPreference = "Continue"
           $ver = (Get-Content release\version.json -Raw | ConvertFrom-Json).version
-          gh release create "v$ver" release\lol-dad-site-portable-$ver.zip release\version.json `
-            --repo "${{ github.repository }}" --title "v$ver" --notes "Auto refresh and publish"
+          if (-not $ver) { throw "version missing from version.json" }
+          gh release delete "v$ver" -y --repo "${{ github.repository }}" 2>$null
+          gh release create "v$ver" "release\lol-dad-site-portable-$ver.zip" "release\version.json" `
+            --repo "${{ github.repository }}" --title "v$ver" --notes "Auto refresh and publish" 2>&1 | Out-Host
+          if ($LASTEXITCODE -ne 0) { throw "gh release create failed (exit $LASTEXITCODE)" }
           Write-Host "release v$ver created"
