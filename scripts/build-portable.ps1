@@ -24,12 +24,13 @@ $nodeZip = Join-Path $cacheDir "node-$nodeVer-win-x64.zip"
 $nodeExtract = Join-Path $cacheDir "node-$nodeVer-win-x64"
 $releaseDir = Join-Path $root "release"
 
-# ASCII folder name: Chinese names break tar.exe on non-Chinese CI runners.
+# ASCII names everywhere: Chinese file names get mangled by tar.exe on the
+# English-codepage CI runner ("?" chars), which breaks extraction on Windows.
 $folderName = "lol-dad-site-portable"
-$startBat = -join @([char]0x542F, [char]0x52A8, [char]0x7F51, [char]0x7AD9, ".bat")  # start-site.bat
-$stopBat = -join @([char]0x505C, [char]0x6B62, [char]0x7F51, [char]0x7AD9, ".bat")    # stop-site.bat
-$checkBat = -join @([char]0x68C0, [char]0x67E5, [char]0x66F4, [char]0x65B0, ".bat")   # check-update.bat
-$readmeTxt = -join @([char]0x4F7F, [char]0x7528, [char]0x8BF4, [char]0x660E, ".txt") # readme.txt
+$startBat = "start.bat"
+$stopBat = "stop.bat"
+$checkBat = "check-update.bat"
+$readmeTxt = "README.txt"
 
 if ([string]::IsNullOrEmpty($folderName) -or [string]::IsNullOrEmpty($startBat)) {
     throw "Display-name construction failed."
@@ -120,6 +121,7 @@ $pidFile = Join-Path $root "app.pid"
 $updatesDir = Join-Path $root "updates"
 $port = 3000
 $hostAddr = "127.0.0.1"
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
 function Test-PortUp {
     $c = New-Object Net.Sockets.TcpClient
@@ -170,8 +172,9 @@ function Get-RemoteManifest {
     }
     foreach ($b in $bases) {
         try {
-            $r = Invoke-WebRequest -Uri ($b + "/version.json") -UseBasicParsing -TimeoutSec 8
-            $m = $r.Content | ConvertFrom-Json
+            $json = & curl.exe -sS --max-time 15 --connect-timeout 8 ($b + "/version.json") 2>$null
+            if ($LASTEXITCODE -ne 0 -or -not $json) { continue }
+            $m = ($json -join "`n") | ConvertFrom-Json
             if ($m.version -and $m.sha256 -and $m.asset) {
                 return @{ Base = $b; Manifest = $m }
             }
@@ -398,7 +401,7 @@ $updatesCfg = @{ repo = $repoParam; mirrors = @("https://ghfast.top/", "https://
 [System.IO.File]::WriteAllText((Join-Path $out "updates.json"), $updatesCfg, $utf8NoBom)
 
 # ---------- 7. Chinese readme (base64 -> UTF-8) ----------
-$readmeB64 = "5L2/55So5pa55rOVCjEuIOWPjOWHu+OAjOWQr+WKqOe9keermS5iYXTjgI0KMi4g562J5b6FIDEtMiDnp5LvvIzmtY/op4jlmajkvJroh6rliqjmiZPlvIAgaHR0cDovLzEyNy4wLjAuMTozMDAwCjMuIOeci+WujOWQjuWPjOWHu+OAjOWBnOatoue9keermS5iYXTjgI3lgZzmraLvvIjmiJbnm7TmjqXlhbPmnLrvvIkKCuivtOaYjgotIOe9keermeWPquWcqOeCueWHu+WQr+WKqOWQjui/kOihjO+8jOWBnOatouWNs+mAgOWHuu+8jOS4jeaui+eVmeWQjuWPsOi/m+eoiwotIOS4jemcgOimgeWuieijhSBOb2RlLmpz44CB5LiN6ZyA6KaB566h55CG5ZGY5p2D6ZmQ44CB5LiN5raJ5Y+K5Lu75L2V6K6h5YiS5Lu75YqhCi0g5pWw5o2u5Li65omT5YyF5pe25Yi755qE5b+r54Wn77yb6ZyA6KaB5pu05paw5pWw5o2u6K+355So5rqQ56CB54mI6L+Q6KGMIG5wbSBydW4gZGF0YTpyZWZyZXNo"
+$readmeB64 = "5L2/55So5pa55rOVCjEuIOWPjOWHu+OAjHN0YXJ0LmJhdOOAjeWQr+WKqOe9keermQoyLiDnrYnlvoUgMS0yIOenku+8jOa1j+iniOWZqOS8muiHquWKqOaJk+W8gCBodHRwOi8vMTI3LjAuMC4xOjMwMDAKMy4g55yL5a6M5ZCO5Y+M5Ye744CMc3RvcC5iYXTjgI3lgZzmraLvvIjmiJbnm7TmjqXlhbPmnLrvvIkKNC4g44CMY2hlY2stdXBkYXRlLmJhdOOAjeWPr+aJi+WKqOajgOafpeabtOaWsAoK6K+05piOCi0g572R56uZ5Y+q5Zyo54K55Ye75ZCv5Yqo5ZCO6L+Q6KGM77yM5YGc5q2i5Y2z6YCA5Ye677yM5LiN5q6L55WZ5ZCO5Y+w6L+b56iLCi0g5LiN6ZyA6KaB5a6J6KOFIE5vZGUuanPjgIHkuI3pnIDopoHnrqHnkIblkZjmnYPpmZDjgIHkuI3mtonlj4rku7vkvZXorqHliJLku7vliqEKLSDpppbmrKHlkK/liqjoi6XmnYDmr5Lova/ku7bor6Lpl67vvIzlhYHorrjljbPlj6/vvIjov5nmmK/mnKzlnLAgTm9kZSDnqIvluo/vvIkKLSDmlbDmja7kuLrmiZPljIXml7bliLvnmoTlv6vnhafvvJvpnIDopoHmm7TmlrDmlbDmja7or7fnlKjmupDnoIHniYjov5DooYwgbnBtIHJ1biBkYXRhOnJlZnJlc2g="
 $readmeBody = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($readmeB64))
 $readme = $folderName + "`r`n`r`n" + $readmeBody + "`r`n`r`n" + @"
 自动更新
