@@ -24,12 +24,8 @@ $nodeZip = Join-Path $cacheDir "node-$nodeVer-win-x64.zip"
 $nodeExtract = Join-Path $cacheDir "node-$nodeVer-win-x64"
 $releaseDir = Join-Path $root "release"
 
-# Chinese display names built from codepoints to keep this file ASCII.
-$folderName = -join @(
-    [char]0x64B8, [char]0x554A, [char]0x64B8, [char]0x804C, [char]0x4E1A,
-    [char]0x7236, [char]0x4E0E, [char]0x5B50, [char]0x2D, [char]0x4FBF,
-    [char]0x643A, [char]0x7248
-)  # LULALU dad-son portable folder
+# ASCII folder name: Chinese names break tar.exe on non-Chinese CI runners.
+$folderName = "lol-dad-site-portable"
 $startBat = -join @([char]0x542F, [char]0x52A8, [char]0x7F51, [char]0x7AD9, ".bat")  # start-site.bat
 $stopBat = -join @([char]0x505C, [char]0x6B62, [char]0x7F51, [char]0x7AD9, ".bat")    # stop-site.bat
 $checkBat = -join @([char]0x68C0, [char]0x67E5, [char]0x66F4, [char]0x65B0, ".bat")   # check-update.bat
