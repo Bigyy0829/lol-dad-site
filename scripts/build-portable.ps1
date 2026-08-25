@@ -219,7 +219,17 @@ function Apply-Update($extract, $ver) {
     foreach ($f in @("updates.json")) {
         $src = Join-Path $extract $f
         if (Test-Path -LiteralPath $src) {
-            Copy-Item -LiteralPath $src -Destination (Join-Path $root $f) -Force
+            $cur = $null
+            $new = $null
+            if (Test-Path -LiteralPath (Join-Path $root $f)) {
+                try { $cur = Get-Content -LiteralPath (Join-Path $root $f) -Raw | ConvertFrom-Json } catch {}
+            }
+            try { $new = Get-Content -LiteralPath $src -Raw | ConvertFrom-Json } catch {}
+            $newValid = $new -and $new.repo -and $new.repo -notmatch "OWNER|placeholder"
+            $curValid = $cur -and $cur.repo -and $cur.repo -notmatch "OWNER|placeholder"
+            if ($newValid -and -not $curValid) {
+                Copy-Item -LiteralPath $src -Destination (Join-Path $root $f) -Force
+            }
         }
     }
     Set-VersionFile $ver

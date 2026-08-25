@@ -67,7 +67,7 @@ jobs:
         run: npm run build
 
       - name: Build portable package
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build-portable.ps1
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build-portable.ps1 -Repo "${{ github.repository }}"
 
       - name: Compute version and write manifest
         shell: pwsh
