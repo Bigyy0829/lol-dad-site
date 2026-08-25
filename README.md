@@ -20,6 +20,7 @@
 
 ```bash
 # 1. 下载数据（Oracle's Elixir 年度 CSV + Leaguepedia 补全 2011-2015 缺口）
+pip install -r requirements.txt   # 安装数据脚本依赖（pandas、requests）
 npm run data:refresh
 
 # 2. 本地开发
