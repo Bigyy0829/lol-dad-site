@@ -24,6 +24,33 @@ jobs:
         with:
           node-version: "24"
 
+      - name: Compute cache date
+        id: date
+        shell: pwsh
+        run: echo "day=$(Get-Date -Format yyyy-MM-dd)" >> $env:GITHUB_OUTPUT
+
+      - name: Cache npm deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Cache data downloads (same-day re-runs skip re-downloading)
+        uses: actions/cache@v4
+        with:
+          path: |
+            data/raw
+            tmp/leaguepedia
+          key: data-${{ runner.os }}-${{ steps.date.outputs.day }}
+
+      - name: Cache portable Node
+        uses: actions/cache@v4
+        with:
+          path: tmp/node-cache
+          key: node-${{ runner.os }}-v24.19.0
+
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
