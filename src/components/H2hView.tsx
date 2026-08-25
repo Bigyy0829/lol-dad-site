@@ -103,19 +103,31 @@ export default function H2hView({ aId, bId, initialFrom, initialTo }: Props) {
   return (
     <div className="container">
       {data && (
-        <div className="player-chips">
-          <div className="player-chip">
-            <span className="pname">{data.a.name}</span>
-            <span className="pmeta">
-              {data.a.teams.slice(0, 2).join(" · ")} · {data.a.games.toLocaleString()} 局
-            </span>
+        <div className="duel-banner">
+          <div className="side-card side-a">
+            <div className="side-head">
+              <h2 className="side-name">{data.a.name}</h2>
+              <span className="side-side">Blue Side</span>
+            </div>
+            <p className="side-meta">
+              {data.a.teams.slice(0, 2).join(" · ") || "暂无战队"} ·{" "}
+              {data.a.games.toLocaleString()} 局
+            </p>
           </div>
-          <span className="vs-badge">VS</span>
-          <div className="player-chip">
-            <span className="pname">{data.b.name}</span>
-            <span className="pmeta">
-              {data.b.teams.slice(0, 2).join(" · ")} · {data.b.games.toLocaleString()} 局
-            </span>
+
+          <div className="vs-crest" aria-hidden="true">
+            VS
+          </div>
+
+          <div className="side-card side-b">
+            <div className="side-head">
+              <h2 className="side-name">{data.b.name}</h2>
+              <span className="side-side">Red Side</span>
+            </div>
+            <p className="side-meta">
+              {data.b.teams.slice(0, 2).join(" · ") || "暂无战队"} ·{" "}
+              {data.b.games.toLocaleString()} 局
+            </p>
           </div>
         </div>
       )}
@@ -141,7 +153,10 @@ export default function H2hView({ aId, bId, initialFrom, initialTo }: Props) {
       {!loading && !error && verdictData && data && (
         <>
           <div className={`verdict ${directionClass}`}>
-            <div className="verdict-kicker">父子关系鉴定报告</div>
+            <p className="verdict-kicker">
+              <span className="verdict-kicker-en">Family Verdict</span>
+              <span className="verdict-kicker-zh">父子关系鉴定报告</span>
+            </p>
             <h2
               className={`verdict-title ${
                 verdictData.direction === "a" || verdictData.direction === "b"
@@ -166,11 +181,11 @@ export default function H2hView({ aId, bId, initialFrom, initialTo }: Props) {
               <div className="bar-track">
                 <div
                   className="bar-a"
-                  style={{ width: `${data.summary.aWinRate * 100}%` }}
+                  style={{ "--p": data.summary.aWinRate } as React.CSSProperties}
                 />
                 <div
                   className="bar-b"
-                  style={{ width: `${data.summary.bWinRate * 100}%` }}
+                  style={{ "--p": data.summary.bWinRate } as React.CSSProperties}
                 />
               </div>
               <div className="bar-labels">
@@ -192,11 +207,15 @@ export default function H2hView({ aId, bId, initialFrom, initialTo }: Props) {
               <div className="bar-track">
                 <div
                   className="bar-a"
-                  style={{ width: `${data.summary.aSeriesWinRate * 100}%` }}
+                  style={
+                    { "--p": data.summary.aSeriesWinRate } as React.CSSProperties
+                  }
                 />
                 <div
                   className="bar-b"
-                  style={{ width: `${data.summary.bSeriesWinRate * 100}%` }}
+                  style={
+                    { "--p": data.summary.bSeriesWinRate } as React.CSSProperties
+                  }
                 />
               </div>
               <div className="bar-labels">
@@ -285,7 +304,10 @@ export default function H2hView({ aId, bId, initialFrom, initialTo }: Props) {
                 <tbody>
                   {data.games.length === 0 && (
                     <tr>
-                      <td colSpan={5} style={{ textAlign: "center", color: "var(--muted)" }}>
+                      <td
+                        colSpan={5}
+                        style={{ textAlign: "center", color: "var(--color-muted)" }}
+                      >
                         该时间段内没有交手记录
                       </td>
                     </tr>
@@ -336,7 +358,10 @@ export default function H2hView({ aId, bId, initialFrom, initialTo }: Props) {
                 <tbody>
                   {data.series.length === 0 && (
                     <tr>
-                      <td colSpan={5} style={{ textAlign: "center", color: "var(--muted)" }}>
+                      <td
+                        colSpan={5}
+                        style={{ textAlign: "center", color: "var(--color-muted)" }}
+                      >
                         该时间段内没有系列赛记录
                       </td>
                     </tr>
@@ -370,16 +395,16 @@ export default function H2hView({ aId, bId, initialFrom, initialTo }: Props) {
           )}
 
           <div className="link-row">
-            <Link className="btn btn-sm" href={`/ranking/${data.a.id}?type=dad`}>
+            <Link className="btn btn-outline btn-sm" href={`/ranking/${data.a.id}?type=dad`}>
               查看 {data.a.name} 的爹榜
             </Link>
-            <Link className="btn btn-sm" href={`/ranking/${data.a.id}?type=son`}>
+            <Link className="btn btn-outline btn-sm" href={`/ranking/${data.a.id}?type=son`}>
               查看 {data.a.name} 的儿榜
             </Link>
-            <Link className="btn btn-sm" href={`/ranking/${data.b.id}?type=dad`}>
+            <Link className="btn btn-outline btn-sm" href={`/ranking/${data.b.id}?type=dad`}>
               查看 {data.b.name} 的爹榜
             </Link>
-            <Link className="btn btn-sm" href={`/ranking/${data.b.id}?type=son`}>
+            <Link className="btn btn-outline btn-sm" href={`/ranking/${data.b.id}?type=son`}>
               查看 {data.b.name} 的儿榜
             </Link>
           </div>

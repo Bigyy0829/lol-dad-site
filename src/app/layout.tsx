@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import "../../tokens.css";
 import "./globals.css";
+import SiteNav from "@/components/SiteNav";
 
 export const metadata: Metadata = {
   title: "撸啊撸职业父与子",
@@ -14,30 +16,29 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body>
+        <a className="skip-link" href="#main">
+          跳到主要内容
+        </a>
         <header className="site-header">
           <div className="container header-inner">
-            <Link href="/" className="brand">
-              <span className="brand-mark">父</span>
-              <span>
+            <Link href="/" className="brand" aria-label="撸啊撸职业父与子 首页">
+              <span className="brand-mark" aria-hidden="true">
+                父
+              </span>
+              <span className="brand-text">
                 撸啊撸<span className="brand-accent">职业父与子</span>
               </span>
             </Link>
-            <nav className="site-nav">
-              <Link className="nav-link" href="/">
-                首页
-              </Link>
-              <Link className="nav-link" href="/ranking">
-                排行榜
-              </Link>
-            </nav>
+            <SiteNav />
           </div>
         </header>
-        <main>{children}</main>
+        <main id="main">{children}</main>
         <footer className="footer">
           <div className="container">
-            数据来源：Oracle&apos;s Elixir（全球职业比赛，持续更新）· 结论仅供娱乐，请勿当真
-            <br />
-            谁是谁的爹，数据说了算；谁是谁的儿，看了别急。
+            <p className="footer-line">
+              数据来源：Oracle&apos;s Elixir（全球职业比赛，持续更新）· 结论仅供娱乐，请勿当真
+            </p>
+            <p className="footer-line">谁是谁的爹，数据说了算；谁是谁的儿，看了别急。</p>
           </div>
         </footer>
       </body>

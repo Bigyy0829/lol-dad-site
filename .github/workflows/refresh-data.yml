@@ -1,0 +1,76 @@
+name: Refresh data and publish
+
+on:
+  schedule:
+    - cron: "0 4 * * 1"   # weekly, Monday 04:00 UTC
+  workflow_dispatch: {}   # allow manual trigger
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install Python deps
+        run: pip install pandas
+
+      - name: Install Node deps
+        run: npm ci
+
+      - name: Refresh all data
+        run: npm run data:refresh
+
+      - name: Build site
+        run: npm run build
+
+      - name: Build portable package
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build-portable.ps1
+
+      - name: Compute version and write manifest
+        shell: pwsh
+        run: |
+          $today = Get-Date -Format "yyyy.MM.dd"
+          $ver = "$today.1"
+          $zip = "release\lol-dad-site-portable-$ver.zip"
+          if (Test-Path $zip) { $zip = "release\lol-dad-site-portable-$today.2.zip" ; $ver = "$today.2" }
+          $sha = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          $manifest = @{
+            version      = $ver
+            asset        = "lol-dad-site-portable-$ver.zip"
+            sha256       = $sha
+            size         = (Get-Item -LiteralPath $zip).Length
+            repo         = "${{ github.repository }}"
+            published_at = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+          } | ConvertTo-Json
+          [System.IO.File]::WriteAllText("release\version.json", $manifest, (New-Object System.Text.UTF8Encoding($false)))
+          Write-Host "version=$ver"
+
+      - name: Remove old releases
+        shell: pwsh
+        run: |
+          $tags = gh release list --repo "${{ github.repository }}" --json tagName --jq ".[].tagName" 2>$null
+          foreach ($t in $tags) {
+            if ($t) { gh release delete $t -y --repo "${{ github.repository }}" }
+          }
+          Write-Host "old releases removed"
+
+      - name: Create release
+        shell: pwsh
+        run: |
+          $ver = (Get-Content release\version.json -Raw | ConvertFrom-Json).version
+          gh release create "v$ver" release\lol-dad-site-portable-$ver.zip release\version.json `
+            --repo "${{ github.repository }}" --title "v$ver" --notes "Auto refresh and publish"
+          Write-Host "release v$ver created"

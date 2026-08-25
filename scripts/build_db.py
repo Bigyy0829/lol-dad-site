@@ -133,8 +133,13 @@ def build():
         df = df[df["position"].fillna("").astype(str).str.strip().str.upper() != "TEAM"]
         df["norm_"] = df["player"].map(norm_name)
         df = df[df["norm_"] != ""]
+        # Drop malformed/misaligned rows without a usable game id.
+        df = df[df["gameid"].notna() & (df["gameid"].astype(str).str.strip() != "")]
         df["date_"] = df["date"].map(clean_date)
-        df["matchid_"] = df["matchid"].fillna("").astype(str).str.strip()
+        df["matchid_"] = (
+            df["matchid"].fillna("").astype(str).str.strip()
+            .replace("nan", "").replace("None", "").replace("<NA>", "")
+        )
         df.loc[df["matchid_"] == "", "matchid_"] = df["gameid"].astype(str)
         df["playoffs_"] = df["playoffs"].map(parse_bool)
         df["game_"] = df["game"].fillna(1).astype(str)
@@ -330,7 +335,11 @@ def build():
         ginfo["blue_team"] = blue[0] if blue else ""
         ginfo["red_team"] = red[0] if red else ""
         ginfo["blue_win"] = None
-        if not ginfo["matchid"] or ginfo["matchid"] == gid:
+        if (
+            not ginfo["matchid"]
+            or str(ginfo["matchid"]).lower() in ("", "nan", "none", "<na>")
+            or ginfo["matchid"] == gid
+        ):
             pair = "~".join(sorted([ginfo["blue_team"], ginfo["red_team"]]))
             ginfo["matchid"] = f"{ginfo['league']}|{ginfo['date']}|{pair}"
         games_out.append(ginfo)

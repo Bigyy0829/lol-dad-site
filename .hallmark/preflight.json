@@ -1,0 +1,16 @@
+{
+  "scannedAt": "2026-08-25",
+  "framework": "Next.js 15 (App Router) + React 19 + TypeScript",
+  "fontStack": "system CJK only (PingFang SC / Microsoft YaHei / Noto Sans CJK SC) via --font in src/app/globals.css :root",
+  "palette": "dark hex custom properties (--bg #070b12, --gold #c9a86b, --blue #5b9bff, --red #ff6b6b) in src/app/globals.css :root",
+  "motion": "motion-cut — no framer-motion/gsap/motion deps in package.json",
+  "spacing": "ad-hoc paddings, no named scale",
+  "pages": [
+    "src/app/page.tsx (home hero + search)",
+    "src/app/ranking/page.tsx (ranking index)",
+    "src/app/ranking/[player]/page.tsx (player dad/son detail)",
+    "src/app/h2h/[a]/[b]/page.tsx (H2H matchup)"
+  ],
+  "designMd": false,
+  "notes": "Blue/red side colors already map to LoL blue-vs-red semantics; preserved and formalized."
+}

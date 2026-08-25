@@ -10,6 +10,19 @@ interface Props {
   autoFocus?: boolean;
 }
 
+const POS_SHORT: Record<string, string> = {
+  TOP: "TOP",
+  JUNGLE: "JGL",
+  JNG: "JGL",
+  MID: "MID",
+  BOT: "BOT",
+  SUP: "SUP",
+};
+
+function posLabel(p: string): string {
+  return POS_SHORT[p.toUpperCase()] ?? "POS";
+}
+
 export default function PlayerAutocomplete({
   value,
   onSelect,
@@ -131,12 +144,19 @@ export default function PlayerAutocomplete({
                 }}
                 onMouseEnter={() => setActive(i)}
               >
-                <div>
-                  <div className="ac-name">{p.name}</div>
-                  <div className="ac-meta">
-                    {p.teams.slice(0, 2).join(" · ") || "暂无战队"}
-                    {p.positions.length ? ` · ${p.positions[0]}` : ""} ·{" "}
-                    {p.games.toLocaleString()} 局
+                <div className="ac-main">
+                  {p.positions.length > 0 && (
+                    <span className="ac-hex" aria-hidden="true">
+                      {posLabel(p.positions[0])}
+                    </span>
+                  )}
+                  <div>
+                    <div className="ac-name">{p.name}</div>
+                    <div className="ac-meta">
+                      {p.teams.slice(0, 2).join(" · ") || "暂无战队"}
+                      {p.positions.length ? ` · ${p.positions[0]}` : ""} ·{" "}
+                      {p.games.toLocaleString()} 局
+                    </div>
                   </div>
                 </div>
                 {p.aliases.length > 0 && (

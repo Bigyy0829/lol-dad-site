@@ -1,15 +1,20 @@
 param(
-    [string]$Proxy = "http://127.0.0.1:7890",
+    [string]$Proxy = "",
     [string]$OutDir = "data/raw",
     [string]$Years = "2014,2015,2016,2017,2018,2019,2025,2026"
 )
 
 # Download official Oracle's Elixir yearly CSVs from Google Drive.
-# Uses the local VPN proxy; resumes partial files; validates CSV header.
+# Optional HTTP proxy (e.g. -Proxy "http://127.0.0.1:7890" for restricted
+# networks); empty means direct connection. Resumes partial files; validates
+# the CSV header.
 $ErrorActionPreference = "Continue"
 $ROOT = Split-Path $PSScriptRoot -Parent
 $OutDirFull = Join-Path $ROOT $OutDir
 New-Item -ItemType Directory -Force -Path $OutDirFull | Out-Null
+
+$ProxyArgs = @()
+if ($Proxy) { $ProxyArgs = @("-x", $Proxy) }
 
 $FileIds = @{
     "2014" = "12syQsRH2QnKrQZTQQ6G5zyVeTG2pAYvu"
@@ -42,11 +47,11 @@ function Test-CsvOk {
 function Get-TotalSize {
     param([string]$FileId)
     $uc = "https://drive.google.com/uc?export=download&id=$FileId&confirm=t"
-    $hdr = curl.exe -sS -D - -o NUL -x $Proxy --max-time 30 $uc 2>$null
+    $hdr = curl.exe -sS -D - -o NUL @ProxyArgs --max-time 30 $uc 2>$null
     $loc = ($hdr | Select-String -Pattern '^Location:' | Select-Object -First 1).Line
     if (-not $loc) { throw "No redirect from Drive for $FileId" }
     $url = ($loc -replace '^Location:\s*', '' -replace '[\r\n]', '').Trim()
-    $r = curl.exe -sS -D - -o NUL -x $Proxy --range 0-0 --max-time 30 $url 2>$null
+    $r = curl.exe -sS -D - -o NUL @ProxyArgs --range 0-0 --max-time 30 $url 2>$null
     $cr = ($r | Select-String -Pattern '^Content-Range:' | Select-Object -First 1).Line
     if ($cr -match '/(\d+)\s*$') { return [long]$Matches[1] }
     $cl = ($r | Select-String -Pattern '^Content-Length:' | Select-Object -First 1).Line
@@ -74,7 +79,7 @@ foreach ($year in $yearList) {
     for ($attempt = 1; $attempt -le 6 -and -not $ok; $attempt++) {
         $url = "https://drive.google.com/uc?export=download&id=$id&confirm=t"
         Write-Output "[$year] attempt $attempt/6 downloading ..."
-        & curl.exe -sS -L -C - -x $Proxy --connect-timeout 15 --max-time 600 `
+        & curl.exe -sS -L -C - @ProxyArgs --connect-timeout 15 --max-time 600 `
             --speed-limit 2048 --speed-time 30 `
             --retry 5 --retry-delay 5 --retry-all-errors -o $out $url 2>$null
         $code = $LASTEXITCODE

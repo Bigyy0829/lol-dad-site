@@ -31,6 +31,9 @@ npm run build && npm run start
 
 访问 http://localhost:3000 。
 
+> 想让本机网站**常驻运行**（关掉 Codex 也不停、登录后自动启动、崩溃自动重启），
+> 见 [docs/run-local-always.md](docs/run-local-always.md)。
+
 ## 数据说明
 
 - 数据源：
@@ -73,6 +76,18 @@ python scripts/check.py "Bin" "Zeus"  # 核对任意两名选手的交手数据
 
 v1 以本地/自托管运行为主：在任意 Node 服务器上 `npm run build && npm run start` 即可。
 注意 better-sqlite3 是文件型数据库，**不适用 Vercel 无服务器环境**；如需上云，可改用国内云服务器，或后续迁移到托管数据库。
+
+## 便携版与自动更新
+
+- `scripts\build-portable.ps1`：把网站打成绿色便携版（内置 Node + 构建产物 + 数据库），
+  输出到 `release/`，双击即用、免安装免管理员。
+- `scripts\publish.ps1`：打包并生成更新清单（SHA256），可选 `-Upload` 直接发 GitHub
+  Release（需要 `gh auth login`）。
+- 便携包双击「启动网站.bat」时会自动检查更新：发现新版自动下载、校验、替换，
+  失败自动回滚旧版；「检查更新.bat」可手动触发。
+- 数据全自动刷新：`.github/workflows/refresh-data.yml` 每周一自动跑
+  `npm run data:refresh` 并发布新版（发布前自动删除旧 Release，只留最新）。
+- 首次上传 GitHub 的手把手教程见 [docs/github-upload.md](docs/github-upload.md)。
 
 ## 免责声明
 

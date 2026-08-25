@@ -1,0 +1,91 @@
+/* Hallmark · genre: atmospheric · macrostructure: Marquee Hero / Split Studio / Catalogue
+ * theme: custom · vibe: "summoner's rift at night, ranked gold, blue vs red"
+ * paper: oklch(13% 0.014 258) · accent: oklch(76% 0.12 84)
+ * display: Microsoft YaHei 900 / PingFang SC 900 · body: PingFang SC / Microsoft YaHei 400
+ * outlier: Bahnschrift SemiCondensed · axes: dark / system-native heavy-CJK / warm-gold-on-cool-blue
+ * design-system: design.md · designed-as-app · studied: no
+ */
+:root {
+  /* paper — cool navy-black, tinted toward the rift blue anchor */
+  --color-paper: oklch(13% 0.014 258);
+  --color-paper-2: oklch(16.5% 0.016 258);
+  --color-paper-3: oklch(20.5% 0.018 258);
+  --color-paper-4: oklch(24.5% 0.02 258);
+
+  /* ink — cool light, tinted toward the same anchor */
+  --color-ink: oklch(94% 0.008 258);
+  --color-ink-2: oklch(74% 0.012 258);
+  --color-muted: oklch(58% 0.014 258);
+  --color-rule: oklch(29% 0.016 258);
+  --color-rule-2: oklch(37% 0.018 258);
+
+  /* accent — ranked gold */
+  --color-accent: oklch(76% 0.12 84);
+  --color-accent-2: oklch(83% 0.1 84);
+  --color-accent-ink: oklch(19% 0.02 258);
+  --color-focus: oklch(80% 0.15 84);
+
+  /* sides — summoner's rift blue / red */
+  --color-blue: oklch(66% 0.15 248);
+  --color-red: oklch(61% 0.17 24);
+
+  /* rank metals — dad/son crests */
+  --color-gold: oklch(76% 0.12 84);
+  --color-silver: oklch(82% 0.02 258);
+  --color-bronze: oklch(63% 0.09 60);
+
+  /* typography */
+  --font-display: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC",
+    "Source Han Sans SC", sans-serif;
+  --font-body: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
+    "Source Han Sans SC", sans-serif;
+  --font-outlier: "Bahnschrift", "Segoe UI", "Microsoft YaHei", sans-serif;
+
+  /* spacing — 4pt scale */
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs: 0.75rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
+  --space-2xl: 4.5rem;
+  --space-3xl: 7rem;
+
+  /* type scale — major third (1.25) */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.25rem;
+  --text-lg: 1.5625rem;
+  --text-xl: 1.9531rem;
+  --text-2xl: 2.4414rem;
+  --text-3xl: 3.0518rem;
+  --text-4xl: 3.8147rem;
+  --text-display: clamp(2.75rem, 5vw + 1rem, 5.25rem);
+  --text-display-s: clamp(2.25rem, 4vw + 0.75rem, 4rem);
+  --text-hero: clamp(2.125rem, 6.2vw + 0.6rem, 4.5rem);
+  --text-verdict: clamp(1.625rem, 4vw + 0.5rem, 2.75rem);
+  --text-page: clamp(1.75rem, 3vw + 0.75rem, 2.5rem);
+
+  /* radius */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* elevation */
+  --shadow-1: 0 1px 0 rgba(4, 7, 14, 0.35), 0 12px 32px -16px rgba(2, 4, 10, 0.8);
+  --shadow-2: 0 2px 0 rgba(4, 7, 14, 0.4), 0 24px 48px -20px rgba(2, 4, 10, 0.9);
+
+  /* motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.25, 1);
+  --dur-short: 160ms;
+  --dur-med: 260ms;
+  --dur-long: 480ms;
+
+  /* hextech notch — angular cut top-right corner */
+  --clip-notch: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
+}

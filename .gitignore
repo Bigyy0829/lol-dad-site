@@ -9,6 +9,7 @@ data/*.db
 data/*.db-*
 *.log
 tmp/
+release/
 tools/aria2/
 .DS_Store
 playwright-report/

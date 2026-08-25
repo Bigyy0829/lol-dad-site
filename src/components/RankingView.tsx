@@ -118,12 +118,13 @@ export default function RankingView({
 
   return (
     <div className="container">
+      <p className="page-kicker">Dad &amp; Son Index</p>
       <h1 className="page-title">爹榜 / 儿榜</h1>
       <p className="page-sub">
         选一名选手，看看谁是压着他的爹、谁又是他随手拿捏的儿。
       </p>
 
-      <div style={{ maxWidth: 560, marginBottom: 22 }}>
+      <div className="search-block">
         <PlayerAutocomplete
           value={player}
           onSelect={(p) => {
@@ -152,18 +153,12 @@ export default function RankingView({
             </button>
           </div>
           <div className="presets">
-            <label style={{ color: "var(--muted)", fontSize: 13 }}>
+            <label className="min-label">
               最少交手{" "}
               <select
+                className="min-select"
                 value={minGames}
                 onChange={(e) => setMinGames(Number(e.target.value))}
-                style={{
-                  background: "var(--surface)",
-                  color: "var(--text)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 8,
-                  padding: "6px 8px",
-                }}
               >
                 {[5, 10, 15, 20, 30].map((n) => (
                   <option key={n} value={n}>
@@ -226,7 +221,7 @@ export default function RankingView({
 
       {!loading && !error && playerId && player && (
         <>
-          <h2 className="section-title" style={{ marginTop: 10 }}>
+          <h2 className="section-title rank-head">
             {player.name}
             {type === "dad" ? " 的爹榜" : " 的儿榜"}
           </h2>
@@ -245,6 +240,9 @@ export default function RankingView({
               <div className="rank-cards">
                 {top3.map((e) => (
                   <div key={e.player.id} className={`rank-card rank-${e.rank}`}>
+                    <span className={`crest rank-${e.rank}`} aria-hidden="true">
+                      {e.rank}
+                    </span>
                     <div className="rank-label">
                       {type === "dad" ? `爹位 #${e.rank}` : `儿位 #${e.rank}`}
                     </div>
@@ -299,7 +297,16 @@ export default function RankingView({
                           <span className={e.pWinRate >= 0.5 ? "win-a" : "win-b"}>
                             {pct(e.pWinRate)}
                           </span>
-                          <span style={{ color: "var(--muted)" }}>
+                          <span
+                            className="mini-bar"
+                            aria-hidden="true"
+                          >
+                            <i
+                              className={e.pWinRate >= 0.5 ? "" : "low"}
+                              style={{ "--p": e.pWinRate } as React.CSSProperties}
+                            />
+                          </span>
+                          <span style={{ color: "var(--color-muted)" }}>
                             {" "}
                             ({e.pWins}-{e.games - e.pWins})
                           </span>
@@ -309,7 +316,7 @@ export default function RankingView({
                         </td>
                         <td>
                           <Link
-                            className="btn btn-sm"
+                            className="btn btn-outline btn-sm"
                             href={`/h2h/${playerId}/${e.player.id}`}
                           >
                             查看交手
