@@ -30,6 +30,7 @@ import csv
 import io
 import json
 import os
+import socket
 import sys
 import time
 
@@ -39,11 +40,28 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RAW_DIR = os.path.join(ROOT, "data", "raw")
 CACHE = os.path.join(ROOT, "tmp", "ag2018_ms.json")
 
-PROXY = "http://127.0.0.1:7890"
-PROXIES = {"http": PROXY, "https": PROXY}
+PROXY = os.environ.get("LEAGUEPEDIA_PROXY", "").strip()
+PROXIES = {"http": PROXY, "https": PROXY} if PROXY else {}
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
 HEADERS = {"User-Agent": UA}
+
+
+def _proxy_candidates():
+    """Local 7890 proxy first when listening; otherwise direct."""
+    if PROXIES:
+        return [PROXIES]
+    local = None
+    try:
+        s = socket.create_connection(("127.0.0.1", 7890), timeout=2)
+        s.close()
+        local = {"http": "http://127.0.0.1:7890",
+                 "https": "http://127.0.0.1:7890"}
+    except Exception:
+        pass
+    if local:
+        return [local, {}]
+    return [{}]
 
 OE_COLUMNS = [
     "gameid", "matchid", "league", "split", "playoffs", "date", "game",
@@ -122,27 +140,28 @@ def fetch_matches(refresh=False):
         "limit": 2000,
     }
     last = None
-    for i in range(6):
-        try:
-            r = requests.get(url, params=params, headers=HEADERS,
-                             proxies=PROXIES, timeout=90)
-            raw = r.content
-            txt = raw.decode("utf-16", "replace") if raw[:2] in (
-                b"\xff\xfe", b"\xfe\xff") else raw.decode("utf-8", "replace")
-            if r.status_code == 200 and "<html" not in txt[:100].lower():
-                rows = list(csv.DictReader(io.StringIO(txt)))
-                out = []
-                for row in rows:
-                    out.append({k.replace(" ", "_"): v
-                                for k, v in row.items()
-                                if not k.replace(" ", "_").endswith("__precision")})
-                os.makedirs(os.path.dirname(CACHE), exist_ok=True)
-                with open(CACHE, "w", encoding="utf-8") as f:
-                    json.dump(out, f, ensure_ascii=False)
-                return out
-        except Exception as e:  # noqa: BLE001
-            last = repr(e)
-            time.sleep(4 * (i + 1))
+    for proxies in _proxy_candidates():
+        for i in range(6):
+            try:
+                r = requests.get(url, params=params, headers=HEADERS,
+                                 proxies=proxies, timeout=90)
+                raw = r.content
+                txt = raw.decode("utf-16", "replace") if raw[:2] in (
+                    b"\xff\xfe", b"\xfe\xff") else raw.decode("utf-8", "replace")
+                if r.status_code == 200 and "<html" not in txt[:100].lower():
+                    rows = list(csv.DictReader(io.StringIO(txt)))
+                    out = []
+                    for row in rows:
+                        out.append({k.replace(" ", "_"): v
+                                    for k, v in row.items()
+                                    if not k.replace(" ", "_").endswith("__precision")})
+                    os.makedirs(os.path.dirname(CACHE), exist_ok=True)
+                    with open(CACHE, "w", encoding="utf-8") as f:
+                        json.dump(out, f, ensure_ascii=False)
+                    return out
+            except Exception as e:  # noqa: BLE001
+                last = repr(e)
+                time.sleep(4 * (i + 1))
     raise RuntimeError(f"failed to fetch MatchSchedule: {last}")
 
 

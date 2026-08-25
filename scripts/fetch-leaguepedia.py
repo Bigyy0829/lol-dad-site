@@ -23,6 +23,7 @@ import html
 import io
 import json
 import os
+import socket
 import sys
 import time
 
@@ -32,11 +33,29 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RAW_DIR = os.path.join(ROOT, "data", "raw")
 CACHE_DIR = os.path.join(ROOT, "tmp", "leaguepedia")
 
-PROXY = "http://127.0.0.1:7890"
-PROXIES = {"http": PROXY, "https": PROXY}
+PROXY = os.environ.get("LEAGUEPEDIA_PROXY", "").strip()
+PROXIES = {"http": PROXY, "https": PROXY} if PROXY else {}
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
 HEADERS = {"User-Agent": UA}
+
+
+def _proxy_candidates():
+    """If a local 7890 proxy is listening (China dev machines), use it first;
+    otherwise go direct (works on CI and for most users)."""
+    if PROXIES:
+        return [PROXIES]
+    local = None
+    try:
+        s = socket.create_connection(("127.0.0.1", 7890), timeout=2)
+        s.close()
+        local = {"http": "http://127.0.0.1:7890",
+                 "https": "http://127.0.0.1:7890"}
+    except Exception:
+        pass
+    if local:
+        return [local, {}]
+    return [{}]
 
 GAMES_FIELDS = ("GameId,MatchId,Tournament,Team1,Team2,WinTeam,DateTime_UTC,"
                 "N_GameInMatch,OverviewPage,Patch,Winner")
@@ -116,27 +135,28 @@ def cargo_export(table, fields, where, limit=2000, offset=0, tries=6):
         "offset": offset,
     }
     last = None
-    for i in range(tries):
-        try:
-            r = requests.get(url, params=params, headers=HEADERS,
-                             proxies=PROXIES, timeout=120)
-            raw = r.content
-            if raw[:2] in (b"\xff\xfe", b"\xfe\xff"):
-                text = raw.decode("utf-16", errors="replace")
-            else:
-                text = raw.decode("utf-8", errors="replace")
-            if r.status_code != 200 or "<html" in text[:200].lower():
-                last = f"HTTP {r.status_code}"
-                time.sleep(5)
-                continue
-            reader = csv.DictReader(io.StringIO(text))
-            out = []
-            for row in reader:
-                out.append(norm_keys(row))
-            return out
-        except Exception as e:  # noqa: BLE001
-            last = repr(e)
-            time.sleep(4 * (i + 1))
+    for proxies in _proxy_candidates():
+        for i in range(tries):
+            try:
+                r = requests.get(url, params=params, headers=HEADERS,
+                                 proxies=proxies, timeout=120)
+                raw = r.content
+                if raw[:2] in (b"\xff\xfe", b"\xfe\xff"):
+                    text = raw.decode("utf-16", errors="replace")
+                else:
+                    text = raw.decode("utf-8", errors="replace")
+                if r.status_code != 200 or "<html" in text[:200].lower():
+                    last = f"HTTP {r.status_code}"
+                    time.sleep(5)
+                    continue
+                reader = csv.DictReader(io.StringIO(text))
+                out = []
+                for row in reader:
+                    out.append(norm_keys(row))
+                return out
+            except Exception as e:  # noqa: BLE001
+                last = repr(e)
+                time.sleep(4 * (i + 1))
     raise RuntimeError(f"cargo_export failed for {table}: {last}")
 
 
