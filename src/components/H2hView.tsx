@@ -314,7 +314,7 @@ export default function H2hView({ aId, bId, initialFrom, initialTo }: Props) {
                   )}
                   {data.games.map((g, i) => (
                     <tr key={`${g.gameId}-${i}`}>
-                      <td style={{ whiteSpace: "nowrap" }}>{g.date}</td>
+                      <td style={{ whiteSpace: "nowrap" }}>{g.date || "日期未知"}</td>
                       <td>
                         <span className="league-pill">{g.league}</span>
                         {g.split ? ` ${g.split}` : ""}
@@ -368,7 +368,7 @@ export default function H2hView({ aId, bId, initialFrom, initialTo }: Props) {
                   )}
                   {data.series.map((s, i) => (
                     <tr key={`${s.matchId}-${i}`}>
-                      <td style={{ whiteSpace: "nowrap" }}>{s.date}</td>
+                      <td style={{ whiteSpace: "nowrap" }}>{s.date || "日期未知"}</td>
                       <td>
                         <span className="league-pill">{s.league}</span>
                         {s.split ? ` ${s.split}` : ""}

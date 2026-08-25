@@ -107,6 +107,14 @@ export function getH2h(
   const fromDate = from || DEFAULT_FROM;
   const toDate = to || DEFAULT_TO;
 
+  // "全部历史" includes games whose date is unknown (empty string).
+  // Only apply the date window when the user actually asked for one.
+  const whereClause = from || to ? "WHERE g.date BETWEEN ? AND ?" : "";
+  const params: unknown[] = [aId, bId];
+  if (from || to) {
+    params.push(fromDate, toDate);
+  }
+
   const rows = db
     .prepare(
       `SELECT g.gameid, g.matchid, g.date, g.league, g.split, g.playoffs,
@@ -122,10 +130,10 @@ export function getH2h(
         AND mp2.player_id = ?
         AND mp1.team != mp2.team
        JOIN games g ON g.id = mp1.game_id
-       WHERE g.date BETWEEN ? AND ?
-       ORDER BY g.date ASC, g.gameid ASC`
+       ${whereClause}
+       ORDER BY CASE WHEN g.date = '' THEN 1 ELSE 0 END, g.date ASC, g.gameid ASC`
     )
-    .all(aId, bId, fromDate, toDate) as Array<{
+    .all(...params) as Array<{
     gameid: string;
     matchid: string;
     date: string;
@@ -214,8 +222,8 @@ export function getH2h(
     bSeriesWins,
     aSeriesWinRate: series.length ? aSeriesWins / series.length : 0,
     bSeriesWinRate: series.length ? bSeriesWins / series.length : 0,
-    firstDate: games[0]?.date ?? "",
-    lastDate: games[games.length - 1]?.date ?? "",
+    firstDate: games.find((g) => g.date)?.date ?? "",
+    lastDate: [...games].reverse().find((g) => g.date)?.date ?? "",
   };
 
   return { a, b, summary, games, series };
@@ -237,6 +245,13 @@ export function getRankings(
   const fromDate = from || DEFAULT_FROM;
   const toDate = to || DEFAULT_TO;
 
+  // Same rule as getH2h: "全部历史" includes unknown-date games.
+  const dateClause = from || to ? "AND g.date BETWEEN ? AND ?" : "";
+  const params: unknown[] = [playerId];
+  if (from || to) {
+    params.push(fromDate, toDate);
+  }
+
   const rows = db
     .prepare(
       `SELECT mp2.player_id AS oid, g.matchid AS mid,
@@ -244,13 +259,13 @@ export function getRankings(
        FROM match_players mp1
        JOIN match_players mp2
          ON mp2.game_id = mp1.game_id
-        AND mp2.player_id != mp1.player_id
-        AND mp1.team != mp2.team
+         AND mp2.player_id != mp1.player_id
+         AND mp1.team != mp2.team
        JOIN games g ON g.id = mp1.game_id
-       WHERE mp1.player_id = ? AND g.date BETWEEN ? AND ?
+       WHERE mp1.player_id = ? ${dateClause}
        GROUP BY mp2.player_id, g.matchid`
     )
-    .all(playerId, fromDate, toDate) as Array<{
+    .all(...params) as Array<{
     oid: number;
     mid: string;
     games: number;
