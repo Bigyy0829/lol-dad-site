@@ -72,10 +72,11 @@ jobs:
       - name: Compute version and write manifest
         shell: pwsh
         run: |
-          $today = Get-Date -Format "yyyy.MM.dd"
-          $ver = "$today.1"
-          $zip = "release\lol-dad-site-portable-$ver.zip"
-          if (Test-Path $zip) { $zip = "release\lol-dad-site-portable-$today.2.zip" ; $ver = "$today.2" }
+          $zipFile = Get-ChildItem release\lol-dad-site-portable-*.zip |
+            Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $zipFile) { throw "no portable zip found in release/" }
+          $zip = $zipFile.FullName
+          $ver = ($zipFile.Name -replace '^lol-dad-site-portable-', '') -replace '\.zip$', ''
           $sha = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
           $manifest = @{
             version      = $ver
