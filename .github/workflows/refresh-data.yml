@@ -12,15 +12,15 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
 
@@ -30,7 +30,7 @@ jobs:
         run: echo "day=$(Get-Date -Format yyyy-MM-dd)" >> $env:GITHUB_OUTPUT
 
       - name: Cache npm deps
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             node_modules
@@ -38,7 +38,7 @@ jobs:
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Cache data downloads (same-day re-runs skip re-downloading)
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             data/raw
@@ -46,7 +46,7 @@ jobs:
           key: data-${{ runner.os }}-${{ steps.date.outputs.day }}
 
       - name: Cache portable Node
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: tmp/node-cache
           key: node-${{ runner.os }}-v24.19.0
