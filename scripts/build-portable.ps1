@@ -101,7 +101,7 @@ Write-Host "== Copying node_modules (this takes a moment) =="
 Copy-Item -LiteralPath (Join-Path $root "node_modules") -Destination (Join-Path $appDir "node_modules") -Recurse -Force
 
 $prune = @(
-    "typescript", "vitest", "@vitest", "playwright", "playwright-core",
+    "vitest", "@vitest", "playwright", "playwright-core",
     "@playwright", "vite", "rollup", "@rollup", "@esbuild", "@types"
 )
 foreach ($p in $prune) {
@@ -247,11 +247,29 @@ function Start-Server {
     $psi.WorkingDirectory = $app
     $psi.UseShellExecute = $false
     $psi.CreateNoWindow = $true
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $script:serverOut = Join-Path $app "server.log"
+    $script:serverErr = Join-Path $app "server.err.log"
     $p = [System.Diagnostics.Process]::Start($psi)
     [System.IO.File]::WriteAllText($pidFile, [string]$p.Id)
+    $outHandler = { if ($EventArgs.Data) { [System.IO.File]::AppendAllText($script:serverOut, $EventArgs.Data + "`r`n") } }
+    $errHandler = { if ($EventArgs.Data) { [System.IO.File]::AppendAllText($script:serverErr, $EventArgs.Data + "`r`n") } }
+    $p.add_OutputDataReceived($outHandler)
+    $p.add_ErrorDataReceived($errHandler)
+    $p.BeginOutputReadLine()
+    $p.BeginErrorReadLine()
     for ($i = 0; $i -lt 40; $i++) {
         if (Test-PortUp) { return $true }
         Start-Sleep -Milliseconds 500
+    }
+    Start-Sleep -Milliseconds 500
+    if (Test-Path -LiteralPath $script:serverErr) {
+        $tail = Get-Content -LiteralPath $script:serverErr -Tail 8 -ErrorAction SilentlyContinue
+        if ($tail) {
+            Write-Host "--- server.err.log ---"
+            $tail | ForEach-Object { Write-Host $_ }
+        }
     }
     return $false
 }
@@ -323,7 +341,8 @@ switch ($action) {
                 }
                 Open-Browser
             } else {
-                Write-Host "Server failed to start. Check port " + $port + "."
+                Write-Host ("Server failed to start. Check port {0}." -f $port)
+                exit 1
             }
         }
     }
@@ -366,6 +385,11 @@ $startBatContent = @'
 setlocal
 cd /d "%~dp0"
 powershell -NoProfile -ExecutionPolicy Bypass -File ".\core.ps1" start
+if errorlevel 1 (
+  echo.
+  echo Startup failed. Please send the error message above.
+  pause
+)
 exit /b
 '@
 $startBatContent = $startBatContent -replace "`r?`n", "`r`n"
